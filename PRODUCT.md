@@ -8,40 +8,47 @@ web
 
 ## Users
 
-A mix of data engineers and data analysts. Their shared situation: they receive raw datasets in varied formats (CSV, Excel, and others) from varied sources, and their job is to turn each dataset into a clean, validated output that conforms to a given target schema — today a slow, manual, code-heavy process. Business domains named so far include insurance, dealer management, and finance.
+A mix of data engineers and data analysts. Their day-to-day situation: they are responsible for data pipelines running across Informatica IDMC and Databricks — monitoring execution status, data freshness, and SLAs; triaging failures; and getting pipelines recovered quickly. In incident workflows they act as operators: reviewing AI diagnoses and approving or rejecting remediation. The dataset-validation capability serves the same mix when onboarding new datasets.
 
 ## Product Purpose
 
-oneflow-demo takes a user from an arbitrary uploaded dataset to a validated, cleaned output matching a given schema, in one continuous flow. The product exists to remove the hand-written-analysis and hand-written-validation-code bottleneck from data onboarding. Success means a user can upload a file, confirm what its columns mean, confirm the rules it should satisfy, and receive passed/failed results and a cleaned output — without writing validation code themselves.
+OneFlow is a centralized AIOps Observability platform for data pipelines. It continuously monitors pipelines across Informatica IDMC and Databricks, provides end-to-end visibility (status, freshness, duration, throughput, SLA compliance, lineage, per-pipeline health score), proactively detects failures and anomalies, uses LLMs to analyze logs and identify root causes, recommends remediation, and lets operators recover pipelines through a human-in-the-loop approval workflow. Success, as stated in the product brief: faster failure detection, reduced MTTR, improved SLA compliance, less manual troubleshooting, standardized incident response across IDMC and Databricks, and recommendations that keep improving through continuous learning.
 
 ## Positioning
 
-The machine authors, the human confirms. LLM analysis proposes the domain, the meaning of each column, and the validation rules; the user reviews and corrects rather than writes from scratch. Rules become durable, stored, reusable artifacts (generic, domain-specific, and custom) rather than one-off answers. Neighboring tools either validate without understanding (rule engines that require hand-authored configs) or understand without validating (chat over data that produces no executable, reusable rules).
+One console, both platforms — pipelines in IDMC and Databricks are normally monitored in separate, siloed tools that show symptoms without explaining them; generic APM tools don't understand data-pipeline semantics (freshness, lineage, checkpoints, SLA). OneFlow correlates failures across both platforms and the supporting infrastructure, then has the AI diagnose and recommend — with confidence scores, evidence, and related historical incidents — while the human stays the decision-maker: every remediation is reviewed and approved before it runs, and every operator decision teaches the system. A dataset-validation capability (LLM-inferred column meanings, recommended quality rules compiled to executable YAML) extends the same "machine authors, human confirms" loop to data onboarding.
 
 ## Operating Context
 
-Current concept (per `docs/arch.png`, not yet binding — see open decisions below): the user uploads a dataset, states a business domain, and reviews LLM-inferred column meanings (with data types, null %, and sample values as evidence). The LLM then recommends generic validations (null, duplicate, type, length, range, format, distinct, pattern) and domain-specific business validations (cross-field, lookup, conditional, aggregation). The user selects and edits rules in a validation UI; selected rules are compiled to YAML (Soda / Great Expectations format), executed against the data on Postgres or Databricks, and produce passed records, failed records with reasons, and a summary report. Cleaned data, rejects, and reports land in bronze-layer storage, with process/error/execution logs, an audit trail, and email/Slack/Teams notifications.
+The product brief's target shape: data sources (IDMC, Databricks workflows/jobs/notebooks, Unity Catalog, infrastructure and cloud logs) feed an observability layer (metrics, logs, events, pipeline metadata, lineage), then an AIOps intelligence layer (log analytics, root-cause analysis, anomaly detection, recommendation engine, knowledge base, LLM incident summarization), surfaced in an operations portal: unified dashboard, incident console, AI recommendations with confidence and estimated business impact, pipeline health views, one-click retry (full re-run, failed-tasks-only, or restart from last successful checkpoint), and a human approval workflow with escalation. Alerts go out via Microsoft Teams, email, or ServiceNow; incidents are prioritized by business criticality and tracked with MTTD/MTTR. Predictive operations forecast failures, capacity bottlenecks, and SLA violations. Operator feedback and successful resolutions are captured for continuous learning.
+
+The dataset-validation capability (current concept in `docs/arch.png`, not binding): upload CSV/Excel, state a business domain (insurance, dealer management, finance are the named examples), review LLM-inferred column meanings with evidence (types, null %, sample values), select and edit recommended generic + business validation rules, compile to YAML (Soda / Great Expectations format), execute, and land passed/failed records, reports, and cleaned data in bronze-layer storage with logs, audit trail, and notifications.
 
 This is a demo/prototype-stage project. The repo today is a fresh Better-T-Stack scaffold: React 19 + TanStack Router + Vite (`apps/web`), Hono API (`apps/server`), Drizzle + SQLite/Turso (`packages/db`), shared shadcn/ui primitives including an unused set of chat components (`packages/ui`). No product features are implemented yet.
 
 ## Capabilities and Constraints
 
-- Nothing in the architecture diagram is a hard commitment yet; it is the current working concept.
-- Explicitly undecided: validation engine (Soda vs Great Expectations), execution database (Postgres vs Databricks), LLM provider/model, and whether conversation is the primary interaction model (chat primitives are installed but unused).
+- Confirmed capability areas (from the brief): centralized observability with lineage and health scores; intelligent failure detection and cross-platform correlation; AI log analysis (root cause, plain-language summaries, incident categorization, resolution recommendations); an AI recommendation engine (diagnosis, confidence, remediation steps, business impact, preventive measures, related incidents); human-in-the-loop recovery (approve/reject, automated remediation where appropriate, one-click retry modes, escalation); automated incident management (Teams/email/ServiceNow, criticality-based priority, MTTD/MTTR); predictive operations; continuous learning from operator feedback.
+- Explicitly undecided: validation engine (Soda vs Great Expectations), validation execution database (Postgres vs Databricks), LLM provider/model, whether conversation is a primary interaction model (chat primitives installed but unused), and whether the demo runs on simulated pipeline data or real IDMC/Databricks connections.
 - The web app and API already run locally (`bun run dev`; web on :3001, API on :3000).
 
 ## Brand Commitments
 
-Working name: "oneflow-demo". No other confirmed name, voice, logo, or identity assets. (The README contains a stray `datalens-demo` line from an earlier scaffold; treat oneflow-demo as current.)
+- Product name in UI: **OneFlow** — "OneFlow" is the product, Datalens is the company attribution.
+- Company brand: **Datalens AI** (datalensai.com) — "Transforming Data into Intelligence"; a Gen AI / BI-ML / data engineering consultancy. Logo (user-provided): dark background, a "dl" monogram built from teal-to-purple gradient lines, with a DATALENS spaced-caps wordmark.
+- Binding visual constraint (user-stated): the UI should feel similar to databricks.com, carrying the Datalens brand. This pins the reference and the brand, not a palette or type system — the visual world itself gets defined in new-work.
 
 ## Evidence on Hand
 
-- `docs/arch.png` — the architecture diagram above; the only product-truth artifact so far.
-- No real datasets, user quotes, customers, benchmarks, or accuracy numbers exist. Future work must not fabricate them; UI copy must use clearly illustrative sample data only.
+- `docs/arch.png` — architecture diagram of the dataset-validation flow.
+- The AIOps platform brief (objective, capabilities, architecture, expected benefits), provided by the user in conversation; its benefits are stated goals, not measured proof.
+- datalensai.com public site copy and the Datalens logo image.
+- No real pipeline data, incidents, customers, benchmarks, or MTTR/accuracy numbers exist. Future work must not fabricate them; dashboards and consoles must use clearly illustrative sample data only.
 
 ## Product Principles
 
-1. **Human confirms, machine authors.** Every LLM proposal — column meanings, domain, rules — is presented for review and edit before anything executes. Nothing runs silently.
-2. **Trust through evidence.** Every inference shows its basis (sample values, null %, profile stats); every failed record carries its failure reasons.
-3. **Rules are durable artifacts.** Validations are stored, reusable across datasets, and exportable — never disposable chat output.
-4. **One flow, upload to outcome.** Minimize steps and handoffs between the raw file and the validated, schema-conforming output.
+1. **AI recommends, the human decides.** Every diagnosis and remediation is reviewable with its evidence; approval is the core workflow, and nothing executes silently.
+2. **Evidence with every claim.** Root causes cite log lines, confidence scores, and related historical incidents — no naked AI assertions.
+3. **One console, both platforms.** IDMC and Databricks failures are correlated into a single operational picture; no swivel-chair between native tools.
+4. **Detection to resolution in one flow.** Shorten the path anomaly → diagnosis → approved action → recovered pipeline; MTTD and MTTR are the numbers that matter.
+5. **Every incident teaches.** Operator feedback and successful resolutions are captured and improve future recommendations.
