@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@oneflow-demo/env": "workspace:*",
+    "ai": "^7.0.35",
     "dotenv": "catalog:",
     "zod": "catalog:"
   },
