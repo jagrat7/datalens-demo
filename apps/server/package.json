@@ -1,0 +1,25 @@
+{
+  "name": "server",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsdown",
+    "check-types": "tsc -b",
+    "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
+    "dev": "bun run --hot src/index.ts",
+    "start": "bun run dist/index.mjs"
+  },
+  "dependencies": {
+    "@oneflow-demo/db": "workspace:*",
+    "@oneflow-demo/env": "workspace:*",
+    "dotenv": "catalog:",
+    "hono": "^4.12.27",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@oneflow-demo/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "tsdown": "^0.22.3",
+    "typescript": "catalog:"
+  }
+}

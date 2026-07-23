@@ -1,0 +1,3 @@
+{
+  "extends": "@oneflow-demo/config/tsconfig.base.json"
+}
