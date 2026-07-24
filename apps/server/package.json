@@ -12,6 +12,7 @@
   "dependencies": {
     "@oneflow-demo/db": "workspace:*",
     "@oneflow-demo/env": "workspace:*",
+    "ai": "^7.0.37",
     "dotenv": "catalog:",
     "hono": "^4.12.27",
     "zod": "catalog:"

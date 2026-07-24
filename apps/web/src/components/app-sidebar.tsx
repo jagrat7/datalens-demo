@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router"
 import { BookOpenText, Home, Plus, Workflow } from "lucide-react"
 import type { ReactNode } from "react"
 
-import { WORKFLOWS } from "@/lib/sample-data"
+import { WORKFLOWS } from "@/lib/workspace-data"
 
 import { BrandLockup } from "./brand-mark"
 import { StatusDot, workflowTone } from "./status-badge"
@@ -105,7 +105,7 @@ export function AppNav({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="shrink-0 border-t border-sidebar-border px-3 py-2.5">
         <p className="text-[10px] leading-relaxed text-muted-foreground">
-          v0 demo · all data is illustrative
+          Bronze layer · setup in progress
         </p>
       </div>
     </div>

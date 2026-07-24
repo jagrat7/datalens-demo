@@ -1,5 +1,13 @@
 import { Badge } from "@oneflow-demo/ui/components/badge"
-import { Button } from "@oneflow-demo/ui/components/button"
+import { buttonVariants } from "@oneflow-demo/ui/components/button"
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@oneflow-demo/ui/components/empty"
 import {
   Table,
   TableBody,
@@ -8,13 +16,13 @@ import {
   TableHeader,
   TableRow,
 } from "@oneflow-demo/ui/components/table"
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router"
-import { ArrowRight, Plus } from "lucide-react"
+import { Link, createFileRoute } from "@tanstack/react-router"
+import { ArrowRight, Plus, Workflow } from "lucide-react"
 
 import { Canvas } from "@/components/page-header"
 import { PassRate } from "@/components/pass-rate"
 import { StatusBadge, workflowTone } from "@/components/status-badge"
-import { WORKFLOWS } from "@/lib/sample-data"
+import { WORKFLOWS } from "@/lib/workspace-data"
 
 export const Route = createFileRoute("/")({
   component: HomeComponent,
@@ -45,7 +53,6 @@ function latestPassRate(workflow: (typeof WORKFLOWS)[number]): number | null {
 }
 
 function HomeComponent() {
-  const navigate = useNavigate()
   const recent = [...WORKFLOWS].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 
   return (
@@ -60,13 +67,13 @@ function HomeComponent() {
           confirmation before anything runs.
         </p>
         <div className="mt-5 flex flex-wrap items-center gap-2">
-          <Button render={<Link to="/workflows/new" />} nativeButton={false}>
-            <Plus className="size-3.5" />
+          <Link to="/workflows/new" className={buttonVariants()}>
+            <Plus data-icon="inline-start" />
             New workflow
-          </Button>
-          <Button variant="outline" render={<Link to="/company-data" />} nativeButton={false}>
+          </Link>
+          <Link to="/company-data" className={buttonVariants({ variant: "outline" })}>
             Add company data
-          </Button>
+          </Link>
         </div>
       </section>
 
@@ -86,70 +93,79 @@ function HomeComponent() {
       <Canvas>
         <div className="flex items-end justify-between">
           <h2 className="text-sm font-semibold">Jump back in</h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            render={<Link to="/workflows" />}
-            nativeButton={false}
-          >
+          <Link to="/workflows" className={buttonVariants({ variant: "ghost", size: "sm" })}>
             All workflows
-            <ArrowRight className="size-3.5" />
-          </Button>
+            <ArrowRight data-icon="inline-end" />
+          </Link>
         </div>
 
         <div className="mt-3 border border-border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Workflow</TableHead>
-                <TableHead>Domain</TableHead>
-                <TableHead className="text-right">Datasets</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Latest pass rate</TableHead>
-                <TableHead className="text-right">Updated</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {recent.map((workflow) => {
-                const status = workflowTone(workflow.status)
-                return (
-                  <TableRow
-                    key={workflow.id}
-                    className="cursor-pointer"
-                    onClick={() =>
-                      navigate({
-                        to: "/workflows/$workflowId",
-                        params: { workflowId: workflow.id },
-                      })
-                    }
-                  >
-                    <TableCell className="font-medium">{workflow.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{workflow.domain}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-xs tabular-nums">
-                      {workflow.datasets.length}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge tone={status.tone} label={status.label} />
-                    </TableCell>
-                    <TableCell>
-                      <PassRate rate={latestPassRate(workflow)} />
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                      {workflow.updatedAt}
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+          {recent.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Workflow</TableHead>
+                  <TableHead>Domain</TableHead>
+                  <TableHead className="text-right">Datasets</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Latest pass rate</TableHead>
+                  <TableHead className="text-right">Updated</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recent.map((workflow) => {
+                  const status = workflowTone(workflow.status)
+                  return (
+                    <TableRow key={workflow.id}>
+                      <TableCell className="font-medium">
+                        <Link
+                          to="/workflows/$workflowId"
+                          params={{ workflowId: workflow.id }}
+                          className="hover:text-primary hover:underline hover:underline-offset-4"
+                        >
+                          {workflow.name}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{workflow.domain}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs tabular-nums">
+                        {workflow.datasets.length}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge tone={status.tone} label={status.label} />
+                      </TableCell>
+                      <TableCell>
+                        <PassRate rate={latestPassRate(workflow)} />
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                        {workflow.updatedAt}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          ) : (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <Workflow />
+                </EmptyMedia>
+                <EmptyTitle>No workflows yet</EmptyTitle>
+                <EmptyDescription>
+                  Define an end schema, attach source datasets, and prepare the first Bronze run.
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Link to="/workflows/new" className={buttonVariants({ size: "sm" })}>
+                  <Plus data-icon="inline-start" />
+                  Create workflow
+                </Link>
+              </EmptyContent>
+            </Empty>
+          )}
         </div>
-
-        <p className="mt-3 text-[11px] text-muted-foreground">
-          Demo workspace — every workflow, dataset, and pass rate on this page is illustrative
-          sample data.
-        </p>
       </Canvas>
     </div>
   )

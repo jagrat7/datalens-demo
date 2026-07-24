@@ -1,6 +1,6 @@
 import { cn } from "@oneflow-demo/ui/lib/utils"
 
-import type { DatasetStatus, WorkflowStatus } from "@/lib/sample-data"
+import type { DatasetStatus, WorkflowStatus } from "@/lib/workspace-data"
 
 type Tone = "healthy" | "warning" | "failed" | "info" | "muted"
 

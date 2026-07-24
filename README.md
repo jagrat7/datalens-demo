@@ -2,18 +2,6 @@
 
 This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Router, Hono, and more.
 
-## Features
-
-- **TypeScript** - For type safety and improved developer experience
-- **TanStack Router** - File-based routing with full type safety
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **Hono** - Lightweight, performant server framework
-- **Bun** - Runtime environment
-- **Drizzle** - TypeScript-first ORM
-- **SQLite/Turso** - Database engine
-- **Nx** - Smart monorepo task orchestration and caching
-- **Oxlint** - Oxlint + Oxfmt (linting & formatting)
 
 ## Getting Started
 
@@ -105,4 +93,16 @@ oneflow-demo/
 - `bun run db:studio`: Open database studio UI
 - `bun run db:local`: Start the local SQLite database
 - `bun run check`: Run Oxlint and Oxfmt
-# datalens-demo
+
+## Stack
+
+- **TypeScript** - For type safety and improved developer experience
+- **TanStack Router** - File-based routing with full type safety
+- **TailwindCSS** - Utility-first CSS for rapid UI development
+- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
+- **Hono** - Lightweight, performant server framework
+- **Bun** - Runtime environment
+- **Drizzle** - TypeScript-first ORM
+- **SQLite/Turso** - Database engine
+- **Nx** - Smart monorepo task orchestration and caching
+- **Oxlint** - Oxlint + Oxfmt (linting & formatting)

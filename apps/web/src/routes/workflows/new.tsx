@@ -7,11 +7,11 @@ import { Label } from "@oneflow-demo/ui/components/label"
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@oneflow-demo/ui/components/select"
-import { Skeleton } from "@oneflow-demo/ui/components/skeleton"
 import {
   Table,
   TableBody,
@@ -23,14 +23,13 @@ import {
 import { Textarea } from "@oneflow-demo/ui/components/textarea"
 import { cn } from "@oneflow-demo/ui/lib/utils"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Check, FileSpreadsheet, Plus, Sparkles, Trash2, Upload } from "lucide-react"
+import { Check, FileSpreadsheet, Plus, Trash2, Upload } from "lucide-react"
 import { useRef, useState } from "react"
 import { Controller, useFieldArray, useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
 
 import { Canvas, PageHeader } from "@/components/page-header"
-import type { BusinessDomain } from "@/lib/sample-data"
 
 export const Route = createFileRoute("/workflows/new")({
   component: NewWorkflowComponent,
@@ -66,31 +65,6 @@ type FormValues = z.infer<typeof formSchema>
 const STEPS = ["Details", "End schema", "Datasets", "Review"] as const
 
 const COLUMN_TYPE_OPTIONS = columnSchema.shape.type.options
-
-const INFERRED_TEMPLATES: Record<
-  BusinessDomain,
-  Array<{ name: string; type: FormValues["columns"][number]["type"]; rule: string; sample: string; meaning: string }>
-> = {
-  Insurance: [
-    { name: "claim_id", type: "string", rule: "not null · unique", sample: "CLM-00429381", meaning: "Unique claim identifier" },
-    { name: "policy_number", type: "string", rule: "not null", sample: "POL-88412-M", meaning: "Policy the claim belongs to" },
-    { name: "incident_date", type: "date", rule: "not null", sample: "2026-06-30", meaning: "Date the loss occurred" },
-    { name: "claimed_amount", type: "currency", rule: "≥ 0", sample: "18,450.00", meaning: "Amount requested" },
-    { name: "claimant_email", type: "email", rule: "valid format", sample: "m.okafor@example.com", meaning: "Claimant contact" },
-  ],
-  "Dealer Management": [
-    { name: "dealer_code", type: "string", rule: "not null · unique · length 6", sample: "DLR042", meaning: "Franchise dealer code" },
-    { name: "dealership_name", type: "string", rule: "not null", sample: "Harborline Auto Group", meaning: "Trading name" },
-    { name: "region", type: "string", rule: "one of 5 regions", sample: "West", meaning: "Sales region" },
-    { name: "contract_start", type: "date", rule: "not null", sample: "2024-11-01", meaning: "Agreement start date" },
-  ],
-  Finance: [
-    { name: "journal_id", type: "string", rule: "not null · unique", sample: "JE-0004821955", meaning: "Journal entry identifier" },
-    { name: "account_code", type: "string", rule: "not null · lookup", sample: "6100-442", meaning: "GL account" },
-    { name: "posting_date", type: "date", rule: "not null", sample: "2026-07-15", meaning: "Effective date" },
-    { name: "amount", type: "currency", rule: "non-zero", sample: "9,120.75", meaning: "Posted amount" },
-  ],
-}
 
 function formatSize(bytes: number): string {
   if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(1)} MB`
@@ -144,7 +118,6 @@ function NewWorkflowComponent() {
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
   const [schemaMode, setSchemaMode] = useState<"upload" | "manual">("upload")
-  const [inferring, setInferring] = useState(false)
   const [dragging, setDragging] = useState(false)
   const schemaFileRef = useRef<HTMLInputElement>(null)
   const datasetFileRef = useRef<HTMLInputElement>(null)
@@ -164,24 +137,10 @@ function NewWorkflowComponent() {
   const errors = form.formState.errors
   const domain = form.watch("domain")
 
-  function inferSchema(fileName: string) {
-    setInferring(true)
-    const selectedDomain = form.getValues("domain")
-    window.setTimeout(() => {
-      const template = INFERRED_TEMPLATES[selectedDomain] ?? INFERRED_TEMPLATES.Insurance
-      columns.replace(
-        template.map((column) => ({
-          name: column.name,
-          type: column.type,
-          required: true,
-          rule: column.rule,
-          sample: column.sample,
-          source: "ai" as const,
-        })),
-      )
-      setInferring(false)
-      toast.success(`Schema inferred from ${fileName} — review every column before continuing`)
-    }, 900)
+  function handleSchemaFile(fileName: string) {
+    toast.info(
+      `Schema inference for ${fileName} will be connected with the Bronze data service`,
+    )
   }
 
   function addDatasetFiles(files: FileList | null) {
@@ -197,22 +156,21 @@ function NewWorkflowComponent() {
       if (!valid) return
     }
     if (step === 1 && columns.fields.length === 0) {
-      toast.error("Define at least one column — upload a sample or add one manually")
+      toast.error("Add at least one target column manually")
       return
     }
     setStep((current) => Math.min(current + 1, STEPS.length - 1))
   }
 
   function onCreate(values: FormValues) {
-    toast.success(`Workflow “${values.name}” created — demo data, not persisted`)
-    navigate({ to: "/workflows" })
+    toast.info(`Workflow “${values.name}” is ready, but persistence is not connected yet`)
   }
 
   return (
     <div>
       <PageHeader
         title="New workflow"
-        description="One workflow owns one end schema and the datasets that feed it. OneFlow infers, you confirm — nothing runs without your review."
+        description="Define the target schema and attach the datasets that should enter Bronze. Nothing runs without your review."
       />
 
       <Canvas>
@@ -227,7 +185,7 @@ function NewWorkflowComponent() {
                     <Label htmlFor="wf-name">Workflow name</Label>
                     <Input
                       id="wf-name"
-                      placeholder="e.g. Claims Intake"
+                      placeholder="Workflow name"
                       autoFocus
                       aria-invalid={Boolean(errors.name)}
                       {...form.register("name")}
@@ -252,9 +210,13 @@ function NewWorkflowComponent() {
                             <SelectValue placeholder="Select a domain" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Insurance">Insurance</SelectItem>
-                            <SelectItem value="Dealer Management">Dealer Management</SelectItem>
-                            <SelectItem value="Finance">Finance</SelectItem>
+                            <SelectGroup>
+                              <SelectItem value="Insurance">Insurance</SelectItem>
+                              <SelectItem value="Dealer Management">
+                                Dealer Management
+                              </SelectItem>
+                              <SelectItem value="Finance">Finance</SelectItem>
+                            </SelectGroup>
                           </SelectContent>
                         </Select>
                       )}
@@ -324,7 +286,7 @@ function NewWorkflowComponent() {
                       event.preventDefault()
                       setDragging(false)
                       const file = event.dataTransfer.files[0]
-                      if (file) inferSchema(file.name)
+                      if (file) handleSchemaFile(file.name)
                     }}
                   >
                     <Upload className="mx-auto size-5 text-muted-foreground" />
@@ -339,9 +301,8 @@ function NewWorkflowComponent() {
                       </button>
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      CSV, XLSX, or JSON. OneFlow reads the file and proposes every column —
-                      <Sparkles className="mx-0.5 inline size-3 align-[-1px]" />
-                      marked AI so you can review with evidence.
+                      CSV, XLSX, or JSON. Schema inference is not connected yet; define columns
+                      manually for now.
                     </p>
                     <input
                       ref={schemaFileRef}
@@ -350,15 +311,15 @@ function NewWorkflowComponent() {
                       className="sr-only"
                       onChange={(event) => {
                         const file = event.target.files?.[0]
-                        if (file) inferSchema(file.name)
+                        if (file) handleSchemaFile(file.name)
                         event.target.value = ""
                       }}
                     />
                   </div>
                 ) : (
                   <p className="mt-4 text-xs text-muted-foreground">
-                    Add every column the output must have. You can still upload a sample later —
-                    both paths land in the same editable schema.
+                    Add every column the output must have. Schema upload can populate this table
+                    once Bronze inference is connected.
                   </p>
                 )}
 
@@ -375,116 +336,107 @@ function NewWorkflowComponent() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {inferring
-                        ? Array.from({ length: 4 }).map((_, index) => (
-                            <TableRow key={`skeleton-${index}`}>
-                              <TableCell colSpan={6}>
-                                <Skeleton className="h-6 w-full" />
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        : null}
-                      {!inferring && columns.fields.length === 0 ? (
+                      {columns.fields.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="h-20 text-center text-xs text-muted-foreground">
-                            No columns yet. Upload a sample to infer them, or add one below.
+                            No columns yet. Add the target schema manually.
                           </TableCell>
                         </TableRow>
                       ) : null}
-                      {!inferring
-                        ? columns.fields.map((field, index) => (
-                            <TableRow key={field.id}>
-                              <TableCell>
-                                <Input
-                                  aria-label={`Column ${index + 1} name`}
-                                  placeholder="column_name"
-                                  className="h-7 font-mono text-xs"
-                                  {...form.register(`columns.${index}.name`)}
+                      {columns.fields.map((field, index) => (
+                        <TableRow key={field.id}>
+                          <TableCell>
+                            <Input
+                              aria-label={`Column ${index + 1} name`}
+                              placeholder="column_name"
+                              className="h-7 font-mono text-xs"
+                              {...form.register(`columns.${index}.name`)}
+                            />
+                            {form.watch(`columns.${index}.source`) === "ai" ? (
+                              <span className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                                <span
+                                  aria-hidden="true"
+                                  className="size-1.5"
+                                  style={{
+                                    backgroundImage:
+                                      "linear-gradient(135deg, var(--lens-teal), var(--lens-blue), var(--lens-violet))",
+                                  }}
                                 />
-                                {form.watch(`columns.${index}.source`) === "ai" ? (
-                                  <span className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
-                                    <span
-                                      aria-hidden="true"
-                                      className="size-1.5"
-                                      style={{
-                                        backgroundImage:
-                                          "linear-gradient(135deg, var(--lens-teal), var(--lens-blue), var(--lens-violet))",
-                                      }}
-                                    />
-                                    AI inferred
-                                  </span>
-                                ) : null}
-                              </TableCell>
-                              <TableCell>
-                                <Controller
-                                  control={form.control}
-                                  name={`columns.${index}.type`}
-                                  render={({ field: typeField }) => (
-                                    <Select
-                                      value={typeField.value}
-                                      onValueChange={typeField.onChange}
-                                    >
-                                      <SelectTrigger
-                                        className="h-7 w-full font-mono text-xs"
-                                        aria-label={`Column ${index + 1} type`}
-                                      >
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {COLUMN_TYPE_OPTIONS.map((type) => (
-                                          <SelectItem key={type} value={type}>
-                                            {type}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  )}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Controller
-                                  control={form.control}
-                                  name={`columns.${index}.required`}
-                                  render={({ field: requiredField }) => (
-                                    <Checkbox
-                                      checked={requiredField.value}
-                                      onCheckedChange={(checked) =>
-                                        requiredField.onChange(checked === true)
-                                      }
-                                      aria-label={`Column ${index + 1} required`}
-                                    />
-                                  )}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  aria-label={`Column ${index + 1} rule`}
-                                  placeholder="not null · unique · range…"
-                                  className="h-7 font-mono text-xs"
-                                  {...form.register(`columns.${index}.rule`)}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  aria-label={`Column ${index + 1} sample`}
-                                  placeholder="example value"
-                                  className="h-7 font-mono text-xs"
-                                  {...form.register(`columns.${index}.sample`)}
-                                />
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="icon-xs"
-                                  aria-label={`Remove column ${index + 1}`}
-                                  onClick={() => columns.remove(index)}
+                                AI inferred
+                              </span>
+                            ) : null}
+                          </TableCell>
+                          <TableCell>
+                            <Controller
+                              control={form.control}
+                              name={`columns.${index}.type`}
+                              render={({ field: typeField }) => (
+                                <Select
+                                  value={typeField.value}
+                                  onValueChange={typeField.onChange}
                                 >
-                                  <Trash2 className="size-3.5" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        : null}
+                                  <SelectTrigger
+                                    className="h-7 w-full font-mono text-xs"
+                                    aria-label={`Column ${index + 1} type`}
+                                  >
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectGroup>
+                                      {COLUMN_TYPE_OPTIONS.map((type) => (
+                                        <SelectItem key={type} value={type}>
+                                          {type}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectGroup>
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Controller
+                              control={form.control}
+                              name={`columns.${index}.required`}
+                              render={({ field: requiredField }) => (
+                                <Checkbox
+                                  checked={requiredField.value}
+                                  onCheckedChange={(checked) =>
+                                    requiredField.onChange(checked === true)
+                                  }
+                                  aria-label={`Column ${index + 1} required`}
+                                />
+                              )}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              aria-label={`Column ${index + 1} rule`}
+                              placeholder="not null · unique · range…"
+                              className="h-7 font-mono text-xs"
+                              {...form.register(`columns.${index}.rule`)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              aria-label={`Column ${index + 1} sample`}
+                              placeholder="example value"
+                              className="h-7 font-mono text-xs"
+                              {...form.register(`columns.${index}.sample`)}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              aria-label={`Remove column ${index + 1}`}
+                              onClick={() => columns.remove(index)}
+                            >
+                              <Trash2 />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 </div>
@@ -666,8 +618,8 @@ function NewWorkflowComponent() {
                   </div>
                 </div>
                 <p className="mt-3 text-[11px] text-muted-foreground">
-                  Creating this workflow stores the schema and queues profiling for attached feeds.
-                  In this demo nothing is persisted.
+                  When persistence is connected, creating this workflow will store the schema and
+                  queue attached datasets for Bronze profiling.
                 </p>
               </section>
             ) : null}
