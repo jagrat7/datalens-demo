@@ -28,11 +28,12 @@
     "check-types": "nx run-many -t check-types",
     "dev:web": "nx run-many -t dev --projects=web",
     "dev:server": "nx run-many -t dev --projects=server",
-    "db:push": "nx run-many -t db:push --projects=@oneflow-demo/db",
-    "db:studio": "nx run-many -t db:studio --projects=@oneflow-demo/db",
-    "db:generate": "nx run-many -t db:generate --projects=@oneflow-demo/db",
-    "db:migrate": "nx run-many -t db:migrate --projects=@oneflow-demo/db",
-    "db:local": "nx run-many -t db:local --projects=@oneflow-demo/db",
+    "db:push": "bun run --cwd packages/db db:push",
+    "db:studio": "bun run --cwd packages/db db:studio",
+    "db:generate": "bun run --cwd packages/db db:generate",
+    "db:migrate": "bun run --cwd packages/db db:migrate",
+    "db:seed": "bun run --cwd packages/db db:seed",
+    "db:local": "bun run --cwd packages/db db:local",
     "check": "oxlint && oxfmt --write"
   },
   "dependencies": {

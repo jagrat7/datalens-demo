@@ -11,10 +11,11 @@
   },
   "scripts": {
     "db:local": "turso dev --db-file local.db",
-    "db:push": "drizzle-kit push",
-    "db:generate": "drizzle-kit generate",
-    "db:studio": "drizzle-kit studio",
-    "db:migrate": "drizzle-kit migrate"
+    "db:push": "bun node_modules/drizzle-kit/bin.cjs push",
+    "db:generate": "bun node_modules/drizzle-kit/bin.cjs generate",
+    "db:studio": "bun node_modules/drizzle-kit/bin.cjs studio",
+    "db:migrate": "bun node_modules/drizzle-kit/bin.cjs migrate",
+    "db:seed": "bun src/seed.ts"
   },
   "dependencies": {
     "@libsql/client": "0.17.4",

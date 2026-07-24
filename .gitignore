@@ -48,6 +48,9 @@ lerna-debug.log*
 coverage
 .nyc_output
 
+# Local database
+/local.db
+
 # Misc
 *.tgz
 .cache

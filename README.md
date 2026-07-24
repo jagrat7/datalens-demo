@@ -29,6 +29,12 @@ bun run db:local
 bun run db:push
 ```
 
+4. Seed the development company, parsed documents, workflow, dataset, successful run, and YAML artifact:
+
+```bash
+bun run db:seed
+```
+
 Then, run the development server:
 
 ```bash
@@ -90,6 +96,7 @@ oneflow-demo/
 - `bun run db:push`: Push schema changes to database
 - `bun run db:generate`: Generate database client/types
 - `bun run db:migrate`: Run database migrations
+- `bun run db:seed`: Seed the local development database
 - `bun run db:studio`: Open database studio UI
 - `bun run db:local`: Start the local SQLite database
 - `bun run check`: Run Oxlint and Oxfmt
