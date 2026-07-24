@@ -1,9 +1,10 @@
 import { cn } from "@oneflow-demo/ui/lib/utils"
+import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { BookOpenText, Home, Plus, Workflow } from "lucide-react"
 import type { ReactNode } from "react"
 
-import { WORKFLOWS } from "@/lib/workspace-data"
+import { workflowsQuery } from "@/lib/queries"
 
 import { BrandLockup } from "./brand-mark"
 import { StatusDot, workflowTone } from "./status-badge"
@@ -25,6 +26,8 @@ function NavSection({ label, children }: { label: string; children: ReactNode })
 }
 
 export function AppNav({ onNavigate }: { onNavigate?: () => void }) {
+  const { data: workflows = [] } = useQuery(workflowsQuery)
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-13 shrink-0 items-center border-b border-sidebar-border px-3">
@@ -70,7 +73,7 @@ export function AppNav({ onNavigate }: { onNavigate?: () => void }) {
           </Link>
 
           <div className="mt-0.5 ml-[13px] flex flex-col gap-0.5 border-l border-sidebar-border pl-2.5">
-            {WORKFLOWS.map((workflow) => {
+            {workflows.map((workflow) => {
               const { tone } = workflowTone(workflow.status)
               return (
                 <Link

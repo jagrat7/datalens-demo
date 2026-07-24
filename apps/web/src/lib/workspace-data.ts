@@ -1,111 +1,119 @@
-// Temporary UI boundary for workspace data until the Bronze API is connected.
 export type WorkflowStatus = "healthy" | "attention" | "failed" | "draft"
+export type DatasetStatus = "validated" | "profiling" | "failed" | "queued"
+export type RunStatus = "queued" | "running" | "completed" | "failed"
 
-export type BusinessDomain = "Insurance" | "Dealer Management" | "Finance"
-
-export const BUSINESS_DOMAINS: BusinessDomain[] = [
-  "Insurance",
-  "Dealer Management",
-  "Finance",
-]
-
-export type ColumnType =
-  | "string"
-  | "integer"
-  | "decimal"
-  | "date"
-  | "boolean"
-  | "email"
-  | "currency"
-
-export const COLUMN_TYPES: ColumnType[] = [
-  "string",
-  "integer",
-  "decimal",
-  "date",
-  "boolean",
-  "email",
-  "currency",
-]
-
-export interface SchemaColumn {
+export interface FinalSchemaColumn {
   name: string
-  type: ColumnType
+  type: "string" | "integer" | "decimal" | "date" | "boolean" | "email" | "currency"
   required: boolean
-  rule: string
-  sample: string
-  meaning: string
-  confidence: number
-  source: "ai" | "user"
+  description: string
+  rules: string[]
 }
 
-export type DatasetStatus = "validated" | "profiling" | "failed" | "queued"
+export interface WorkflowSummary {
+  id: string
+  name: string
+  domain: string
+  description: string
+  status: WorkflowStatus
+  updatedAt: string
+  version: number | null
+  columnCount: number
+  datasetCount: number
+  rulesCount: number
+  latestPassRate: number | null
+}
 
 export interface DatasetFeed {
   id: string
   name: string
-  format: "CSV" | "XLSX" | "JSON" | "PARQUET"
-  size: string
-  rows: number
+  storageKey: string
+  format: string
+  sizeBytes: number
+  rowCount: number
   status: DatasetStatus
   passRate: number | null
-  addedAt: string
+  createdAt: string
 }
 
 export interface WorkflowRun {
   id: string
-  startedAt: string
-  duration: string
-  passed: number
-  failed: number
-  status: "completed" | "failed" | "running"
+  name: string
+  customInstructions: string | null
+  status: RunStatus
+  passedRows: number
+  failedRows: number
+  durationSeconds: number | null
+  startedAt: string | null
+  completedAt: string | null
+  createdAt: string
 }
 
-export interface Workflow {
+export interface YamlArtifact {
+  id: string
+  runId: string
+  storageKey: string
+  content: string
+  createdAt: string
+}
+
+export interface WorkflowDetail {
   id: string
   name: string
-  domain: BusinessDomain
+  domain: string
   description: string
   status: WorkflowStatus
   updatedAt: string
-  schema: SchemaColumn[]
+  version: number | null
+  finalSchema: FinalSchemaColumn[]
+  rulesCount: number
   datasets: DatasetFeed[]
   runs: WorkflowRun[]
-  rulesCount: number
+  yamlArtifacts: YamlArtifact[]
 }
 
-export const WORKFLOWS: Workflow[] = []
-
-export type DocumentCategory = "Policy" | "Standard" | "Reference" | "Template"
-export type DocumentFormat = "PDF" | "DOCX" | "XLSX" | "MD"
-
-export interface CompanyDocument {
+export interface ParsedCompanyDocument {
   id: string
   name: string
-  category: DocumentCategory
-  format: DocumentFormat
-  size: string
-  updatedAt: string
-  owner: string
+  storageKey: string
+  mimeType: string
+  status: "uploaded" | "parsed" | "failed"
+  parsedText: string | null
+  metadata: {
+    pageCount: number
+    language: string
+    parser: string
+  } | null
+  parsedAt: string | null
+  createdAt: string
 }
 
-export const DOCUMENT_CATEGORIES: DocumentCategory[] = [
-  "Policy",
-  "Standard",
-  "Reference",
-  "Template",
-]
-
-export const COMPANY_DOCUMENTS: CompanyDocument[] = []
-
-export function getWorkflow(id: string): Workflow | undefined {
-  return WORKFLOWS.find((workflow) => workflow.id === id)
+export interface CompanyWorkspace {
+  company: {
+    id: string
+    name: string
+    slug: string
+  }
+  documents: ParsedCompanyDocument[]
 }
+
+const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "medium",
+  timeStyle: "short",
+})
 
 export function formatRows(count: number): string {
   return new Intl.NumberFormat("en-US").format(count)
 }
 
-export function passRateLabel(rate: number | null): string {
-  return rate === null ? "—" : `${rate.toFixed(1)}%`
+export function formatDuration(seconds: number | null): string {
+  if (seconds === null) return "—"
+
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+  return `${minutes}m ${remainingSeconds.toString().padStart(2, "0")}s`
+}
+
+export function formatDateTime(value: string | null): string {
+  return value ? dateTimeFormatter.format(new Date(value)) : "—"
 }

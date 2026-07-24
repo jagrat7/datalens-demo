@@ -73,7 +73,7 @@ export function datasetTone(status: DatasetStatus): { tone: Tone; label: string 
   }
 }
 
-export function runTone(status: "completed" | "failed" | "running"): {
+export function runTone(status: "queued" | "completed" | "failed" | "running"): {
   tone: Tone
   label: string
 } {
@@ -84,5 +84,7 @@ export function runTone(status: "completed" | "failed" | "running"): {
       return { tone: "failed", label: "Failed" }
     case "running":
       return { tone: "info", label: "Running" }
+    case "queued":
+      return { tone: "muted", label: "Queued" }
   }
 }

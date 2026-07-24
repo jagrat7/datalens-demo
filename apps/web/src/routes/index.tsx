@@ -16,13 +16,16 @@ import {
   TableHeader,
   TableRow,
 } from "@oneflow-demo/ui/components/table"
+import { useQuery } from "@tanstack/react-query"
 import { Link, createFileRoute } from "@tanstack/react-router"
 import { ArrowRight, Plus, Workflow } from "lucide-react"
 
+import { DataQueryState } from "@/components/data-query-state"
 import { Canvas } from "@/components/page-header"
 import { PassRate } from "@/components/pass-rate"
 import { StatusBadge, workflowTone } from "@/components/status-badge"
-import { WORKFLOWS } from "@/lib/workspace-data"
+import { workflowsQuery } from "@/lib/queries"
+import { formatDateTime } from "@/lib/workspace-data"
 
 export const Route = createFileRoute("/")({
   component: HomeComponent,
@@ -46,14 +49,13 @@ const FLOW_STEPS = [
   },
 ]
 
-function latestPassRate(workflow: (typeof WORKFLOWS)[number]): number | null {
-  const withRates = workflow.datasets.filter((dataset) => dataset.passRate !== null)
-  if (withRates.length === 0) return null
-  return withRates[withRates.length - 1]?.passRate ?? null
-}
-
 function HomeComponent() {
-  const recent = [...WORKFLOWS].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  const {
+    data: workflows = [],
+    error,
+    isPending,
+    refetch,
+  } = useQuery(workflowsQuery)
 
   return (
     <div>
@@ -100,7 +102,12 @@ function HomeComponent() {
         </div>
 
         <div className="mt-3 border border-border bg-card">
-          {recent.length > 0 ? (
+          <DataQueryState
+            isPending={isPending}
+            error={error}
+            onRetry={() => void refetch()}
+          />
+          {!isPending && !error && workflows.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -113,7 +120,7 @@ function HomeComponent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recent.map((workflow) => {
+                {workflows.map((workflow) => {
                   const status = workflowTone(workflow.status)
                   return (
                     <TableRow key={workflow.id}>
@@ -130,23 +137,23 @@ function HomeComponent() {
                         <Badge variant="secondary">{workflow.domain}</Badge>
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs tabular-nums">
-                        {workflow.datasets.length}
+                        {workflow.datasetCount}
                       </TableCell>
                       <TableCell>
                         <StatusBadge tone={status.tone} label={status.label} />
                       </TableCell>
                       <TableCell>
-                        <PassRate rate={latestPassRate(workflow)} />
+                        <PassRate rate={workflow.latestPassRate} />
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                        {workflow.updatedAt}
+                        {formatDateTime(workflow.updatedAt)}
                       </TableCell>
                     </TableRow>
                   )
                 })}
               </TableBody>
             </Table>
-          ) : (
+          ) : !isPending && !error ? (
             <Empty>
               <EmptyHeader>
                 <EmptyMedia variant="icon">
@@ -164,7 +171,7 @@ function HomeComponent() {
                 </Link>
               </EmptyContent>
             </Empty>
-          )}
+          ) : null}
         </div>
       </Canvas>
     </div>

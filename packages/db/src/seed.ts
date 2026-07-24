@@ -26,9 +26,9 @@ const seedIds = {
   run: "seed-run-claims-intake-001",
   yaml: "seed-yaml-claims-intake-001",
   documents: {
-    classification: "seed-document-data-classification",
-    claims: "seed-document-claims-standard",
-    retention: "seed-document-retention-policy",
+    overview: "seed-document-data-classification",
+    operations: "seed-document-claims-standard",
+    glossary: "seed-document-retention-policy",
   },
 } as const
 
@@ -46,16 +46,16 @@ const companySeed = {
 
 const documentSeeds = [
   {
-    id: seedIds.documents.classification,
+    id: seedIds.documents.overview,
     companyId: seedIds.company,
-    name: "Data Classification Policy",
-    storageKey: `seed/${companySeed.slug}/documents/data-classification-policy.pdf`,
+    name: "Company Overview",
+    storageKey: `seed/${companySeed.slug}/documents/company-overview.pdf`,
     mimeType: "application/pdf",
     status: "parsed",
     parsedText:
-      "Customer identifiers and contact fields are confidential. Email addresses must use a valid format, identifiers must be unique, and confidential fields must not be empty when required by the target schema.",
+      "Datalens AI helps insurance teams consolidate operational data from brokers, policy administrators, and claims platforms. The claims intake group receives files throughout each reporting cycle and prepares them for downstream analytics, finance, and customer service teams. Work is organized by business line and source partner, with each intake tracked from receipt through review.",
     metadata: {
-      pageCount: 8,
+      pageCount: 6,
       language: "en",
       parser: "seed",
     },
@@ -63,16 +63,16 @@ const documentSeeds = [
     createdAt: seedCreatedAt,
   },
   {
-    id: seedIds.documents.claims,
+    id: seedIds.documents.operations,
     companyId: seedIds.company,
-    name: "Claims Intake Validation Standard",
-    storageKey: `seed/${companySeed.slug}/documents/claims-intake-validation-standard.docx`,
+    name: "Claims Operations Handbook",
+    storageKey: `seed/${companySeed.slug}/documents/claims-operations-handbook.docx`,
     mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     status: "parsed",
     parsedText:
-      "Every claim must include a unique claim identifier, policy number, incident date, and non-negative claimed amount. Incident dates cannot be in the future. Claim identifiers follow the CLM-######## pattern.",
+      "Claims specialists review new submissions, connect them to the relevant policy, and capture the circumstances and financial details of the reported incident. Records may arrive through partner portals, email-assisted intake, or scheduled file transfers. The operations team uses a common vocabulary so adjusters, finance teams, and analysts can discuss the same claim consistently across systems.",
     metadata: {
-      pageCount: 5,
+      pageCount: 7,
       language: "en",
       parser: "seed",
     },
@@ -80,16 +80,16 @@ const documentSeeds = [
     createdAt: seedCreatedAt,
   },
   {
-    id: seedIds.documents.retention,
+    id: seedIds.documents.glossary,
     companyId: seedIds.company,
-    name: "Bronze Data Retention Policy",
-    storageKey: `seed/${companySeed.slug}/documents/bronze-data-retention-policy.pdf`,
+    name: "Insurance Product Glossary",
+    storageKey: `seed/${companySeed.slug}/documents/insurance-product-glossary.pdf`,
     mimeType: "application/pdf",
     status: "parsed",
     parsedText:
-      "Raw source files, parsed metadata, validation reports, and generated rule files must retain their original run identifier and ingestion timestamp. Failed rows must remain traceable to their source dataset.",
+      "A claim is a request for coverage following a reported incident. A policy identifies the insurance contract associated with that claim. The incident date describes when the covered event occurred, while the claimed amount describes the amount requested before assessment. Brokers, policyholders, adjusters, and underwriters may each contribute information during the claim lifecycle.",
     metadata: {
-      pageCount: 4,
+      pageCount: 12,
       language: "en",
       parser: "seed",
     },
@@ -146,7 +146,7 @@ const workflowVersionSeed = {
   version: 1,
   finalSchema,
   defaultInstructions:
-    "Use parsed company policies as validation context. Preserve source lineage and emit the generated validation rules as YAML.",
+    "Use parsed company documents only for business terminology and domain context. Derive validation constraints from the final schema and dataset profile, preserve source lineage, and emit the generated rules as YAML.",
   createdAt: seedCreatedAt,
 } satisfies typeof workflowVersions.$inferInsert
 
@@ -168,7 +168,8 @@ const runSeed = {
   id: seedIds.run,
   workflowVersionId: seedIds.workflowVersion,
   name: "Claims Intake · July 2026",
-  customInstructions: "Apply the current Claims Intake Validation Standard.",
+  customInstructions:
+    "Use company terminology as descriptive context for the claims data.",
   status: "completed",
   passedRows: 1_250,
   failedRows: 0,

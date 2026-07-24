@@ -1,5 +1,5 @@
 import { Badge } from "@oneflow-demo/ui/components/badge"
-import { Button } from "@oneflow-demo/ui/components/button"
+import { Button, buttonVariants } from "@oneflow-demo/ui/components/button"
 import {
   Empty,
   EmptyDescription,
@@ -16,11 +16,15 @@ import {
   TableRow,
 } from "@oneflow-demo/ui/components/table"
 import { cn } from "@oneflow-demo/ui/lib/utils"
+import { useQuery } from "@tanstack/react-query"
 import { Link, createFileRoute } from "@tanstack/react-router"
 import {
   Check,
   ChevronRight,
+  Copy,
   Database,
+  Eye,
+  FileCode2,
   FileSpreadsheet,
   Pencil,
   Plus,
@@ -28,9 +32,17 @@ import {
 import { useState, type ReactNode } from "react"
 import { toast } from "sonner"
 
+import { DataQueryState } from "@/components/data-query-state"
+import { DataViewerSheet } from "@/components/data-viewer-sheet"
 import { PassRate } from "@/components/pass-rate"
 import { StatusBadge, datasetTone, runTone } from "@/components/status-badge"
-import { formatRows, getWorkflow } from "@/lib/workspace-data"
+import { ApiError } from "@/lib/api-client"
+import { workflowQuery } from "@/lib/queries"
+import {
+  formatDateTime,
+  formatDuration,
+  formatRows,
+} from "@/lib/workspace-data"
 import type { DatasetStatus } from "@/lib/workspace-data"
 
 const BRONZE_DATASET_STATE = {
@@ -119,8 +131,42 @@ function PipelineStage({
 
 function WorkflowDetailComponent() {
   const { workflowId } = Route.useParams()
-  const workflow = getWorkflow(workflowId)
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
+  const [isRulesOpen, setIsRulesOpen] = useState(false)
+  const {
+    data: workflow,
+    error,
+    isPending,
+    refetch,
+  } = useQuery(workflowQuery(workflowId))
+
+  if (isPending) {
+    return (
+      <div className="mx-auto max-w-6xl px-6 py-8 lg:px-8">
+        <div className="border border-border bg-card">
+          <DataQueryState
+            isPending
+            error={null}
+            onRetry={() => void refetch()}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  if (error && !(error instanceof ApiError && error.status === 404)) {
+    return (
+      <div className="mx-auto max-w-6xl px-6 py-8 lg:px-8">
+        <div className="border border-border bg-card">
+          <DataQueryState
+            isPending={false}
+            error={error}
+            onRetry={() => void refetch()}
+          />
+        </div>
+      </div>
+    )
+  }
 
   if (!workflow) {
     return (
@@ -129,14 +175,12 @@ function WorkflowDetailComponent() {
         <p className="mt-2 text-[13px] text-muted-foreground">
           “{workflowId}” does not exist in this workspace.
         </p>
-        <Button
-          variant="outline"
-          className="mt-5"
-          render={<Link to="/workflows" />}
-          nativeButton={false}
+        <Link
+          to="/workflows"
+          className={buttonVariants({ variant: "outline", className: "mt-5" })}
         >
           Back to workflows
-        </Button>
+        </Link>
       </div>
     )
   }
@@ -154,16 +198,22 @@ function WorkflowDetailComponent() {
   const processedCount = processedDatasets.length
   const remainingCount = totalDatasets - processedCount
   const stagedRows = processedDatasets.reduce(
-    (total, dataset) => total + dataset.rows,
+    (total, dataset) => total + dataset.rowCount,
     0,
   )
   const recentRuns = workflow.runs
-    .toSorted((first, second) => second.startedAt.localeCompare(first.startedAt))
+    .toSorted((first, second) => {
+      const firstDate = first.startedAt ?? first.createdAt
+      const secondDate = second.startedAt ?? second.createdAt
+      return secondDate.localeCompare(firstDate)
+    })
     .slice(0, 3)
   const selectedRun =
     recentRuns.find((run) => run.id === selectedRunId) ?? recentRuns[0] ?? null
+  const selectedArtifact =
+    workflow.yamlArtifacts.find((artifact) => artifact.runId === selectedRun?.id) ?? null
   const selectedRunTotal = selectedRun
-    ? selectedRun.passed + selectedRun.failed
+    ? selectedRun.passedRows + selectedRun.failedRows
     : stagedRows
   const selectedRunStatus = selectedRun ? runTone(selectedRun.status) : null
   const allProcessed = totalDatasets > 0 && remainingCount === 0
@@ -190,6 +240,17 @@ function WorkflowDetailComponent() {
       ? ({ tone: "info", label: "Ready to build" } as const)
       : ({ tone: "muted", label: "Waiting" } as const)
   const displayedGoldState = selectedRunStatus ?? goldState
+
+  async function copyGeneratedRules() {
+    if (!selectedArtifact) return
+
+    try {
+      await navigator.clipboard.writeText(selectedArtifact.content)
+      toast.success("Generated rules copied")
+    } catch {
+      toast.error("Unable to copy the generated rules")
+    }
+  }
 
   return (
     <div>
@@ -270,9 +331,9 @@ function WorkflowDetailComponent() {
                   </TableHeader>
                   <TableBody>
                     {recentRuns.map((run) => {
-                      const runTotal = run.passed + run.failed
+                      const runTotal = run.passedRows + run.failedRows
                       const runPassRate =
-                        runTotal > 0 ? (run.passed / runTotal) * 100 : null
+                        runTotal > 0 ? (run.passedRows / runTotal) * 100 : null
                       const status = runTone(run.status)
                       const isSelected = selectedRun?.id === run.id
 
@@ -292,20 +353,23 @@ function WorkflowDetailComponent() {
                             setSelectedRunId(run.id)
                           }}
                         >
-                          <TableCell className="font-mono text-xs font-medium">
-                            {run.id}
+                          <TableCell>
+                            <span className="block text-xs font-medium">{run.name}</span>
+                            <span className="block font-mono text-[11px] text-muted-foreground">
+                              {run.id}
+                            </span>
                           </TableCell>
                           <TableCell className="font-mono text-xs">
-                            {run.startedAt}
+                            {formatDateTime(run.startedAt ?? run.createdAt)}
                           </TableCell>
                           <TableCell className="font-mono text-xs">
-                            {run.duration}
+                            {formatDuration(run.durationSeconds)}
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs tabular-nums">
-                            {formatRows(run.passed)}
+                            {formatRows(run.passedRows)}
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs tabular-nums">
-                            {formatRows(run.failed)}
+                            {formatRows(run.failedRows)}
                           </TableCell>
                           <TableCell>
                             <StatusBadge tone={status.tone} label={status.label} />
@@ -352,7 +416,7 @@ function WorkflowDetailComponent() {
               </h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 {selectedRun
-                  ? `Showing pipeline output from ${selectedRun.startedAt}.`
+                  ? `Showing pipeline output from ${formatDateTime(selectedRun.startedAt ?? selectedRun.createdAt)}.`
                   : "Follow each input from validation through aggregation to the Gold output."}
               </p>
             </div>
@@ -421,6 +485,30 @@ function WorkflowDetailComponent() {
                     })}
                   </ul>
                 )}
+                {selectedArtifact ? (
+                  <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <FileCode2
+                        aria-hidden="true"
+                        className="size-4 shrink-0 text-muted-foreground"
+                      />
+                      <span className="truncate font-mono text-xs">
+                        {selectedArtifact.storageKey.split("/").at(-1)}
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <Badge variant="outline">Rules generated</Badge>
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => setIsRulesOpen(true)}
+                      >
+                        <Eye data-icon="inline-start" />
+                        View rules
+                      </Button>
+                    </span>
+                  </div>
+                ) : null}
               </div>
               <p className="mt-2.5 text-[11px] text-muted-foreground">
                 Validation begins when a dataset is uploaded.
@@ -543,14 +631,14 @@ function WorkflowDetailComponent() {
                   <div>
                     <dt className="text-[11px] text-muted-foreground">End schema</dt>
                     <dd className="mt-1 font-mono text-xs tabular-nums">
-                      {workflow.schema.length} columns
+                      {workflow.finalSchema.length} columns
                     </dd>
                   </div>
                   <div>
                     <dt className="text-[11px] text-muted-foreground">Output rows</dt>
                     <dd className="mt-1 font-mono text-xs tabular-nums">
                       {selectedRun
-                        ? formatRows(selectedRun.passed)
+                        ? formatRows(selectedRun.passedRows)
                         : processedCount > 0
                           ? formatRows(stagedRows)
                           : "—"}
@@ -559,7 +647,7 @@ function WorkflowDetailComponent() {
                   <div>
                     <dt className="text-[11px] text-muted-foreground">Rejected rows</dt>
                     <dd className="mt-1 font-mono text-xs tabular-nums">
-                      {selectedRun ? formatRows(selectedRun.failed) : "—"}
+                      {selectedRun ? formatRows(selectedRun.failedRows) : "—"}
                     </dd>
                   </div>
                 </dl>
@@ -573,6 +661,75 @@ function WorkflowDetailComponent() {
           </ol>
         </section>
       </main>
+
+      <DataViewerSheet
+        open={isRulesOpen && selectedArtifact !== null}
+        onOpenChange={setIsRulesOpen}
+        title={selectedArtifact?.storageKey.split("/").at(-1) ?? "Generated rules"}
+        description={
+          selectedRun
+            ? `Validation rules generated by ${selectedRun.name}.`
+            : "Validation rules generated by this workflow run."
+        }
+        metadata={[
+          {
+            label: "Run status",
+            value: selectedRunStatus ? (
+              <StatusBadge
+                tone={selectedRunStatus.tone}
+                label={selectedRunStatus.label}
+              />
+            ) : (
+              "—"
+            ),
+          },
+          {
+            label: "Rules",
+            value: (
+              <span className="font-mono tabular-nums">{workflow.rulesCount}</span>
+            ),
+          },
+          {
+            label: "Run",
+            value: <span className="font-mono">{selectedRun?.id ?? "—"}</span>,
+          },
+          {
+            label: "Generated",
+            value: formatDateTime(selectedArtifact?.createdAt ?? null),
+          },
+          {
+            label: "Storage key",
+            value: (
+              <span className="font-mono">{selectedArtifact?.storageKey ?? "—"}</span>
+            ),
+            wide: true,
+          },
+        ]}
+      >
+        <section aria-labelledby="generated-yaml-heading">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 id="generated-yaml-heading" className="text-sm font-semibold">
+                Generated YAML
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Executable validation rules produced for the selected run.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => void copyGeneratedRules()}
+            >
+              <Copy data-icon="inline-start" />
+              Copy
+            </Button>
+          </div>
+          <pre className="mt-4 overflow-x-auto border-y border-border bg-muted/30 px-4 py-4 font-mono text-xs leading-5">
+            <code>{selectedArtifact?.content ?? ""}</code>
+          </pre>
+        </section>
+      </DataViewerSheet>
     </div>
   )
 }
